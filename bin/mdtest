@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+
+var mdtest = require('..');
+var prompt = require('prompt');
+var fs = require('fs');
+
+//watch and read file paths
+var filePaths = process.argv.slice(2);
+
+if (!filePaths.length) {
+	console.log('Usage: \n    mdtest markdownfile1.md markdownfile2.md ...\n');
+	console.log('To Clear User Agent: \n    mdtest --clear-settings');
+} else if (filePaths.indexOf('--clear-settings') >= 0) {
+	deleteConfig();
+} else {
+	hasGetAgent(function(agent) {
+		if (agent) {
+			mdtest(agent, filePaths);
+		} else {
+			console.error('ERR: You need to enter your github User-Agent.');
+		}
+	});
+}
+
+
+function hasGetAgent(cb) {
+	var agent;
+	try {
+		agent = require(__dirname + '/../config.json').agent;
+		cb(agent);
+	} catch (err) {
+		prompt.start();
+		prompt.get([{
+			name: 'agent',
+			description: 'Github User Agent (your github username)'
+		}], function(err, result) {
+			if (!err) {
+				agent = result.agent;
+				writeConfig(agent);
+				cb(agent);
+			} else {
+				cb(null)
+			}
+		})
+
+	}
+}
+
+
+function writeConfig(agent) {
+	fs.writeFileSync(__dirname + '/../config.json', '{"agent":"' + agent + '"}');
+}
+
+function deleteConfig() {
+	fs.unlink(__dirname + '/../config.json', function(err) {
+		if (err) {
+			console.log('Settings Already Cleared.'); //weak, TODO: improve this handling
+		} else {
+			console.log('Settings Cleared.');
+		}
+	});
+}
